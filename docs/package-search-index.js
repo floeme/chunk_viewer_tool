@@ -1,1 +1,0 @@
-packageSearchIndex = [{"l":"All Packages","u":"allpackages-index.html"},{"l":"fr.florian"},{"l":"fr.florian.engine.graphics"},{"l":"fr.florian.engine.io"},{"l":"fr.florian.engine.maths"},{"l":"fr.florian.engine.objects"},{"l":"fr.florian.engine.utils"}];updateSearchResults();
