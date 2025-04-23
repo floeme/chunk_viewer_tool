@@ -9,20 +9,44 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+/**
+ * Represents a chunk in the voxel world, composed of a 3D array of blocks.
+ * Supports asynchronous block generation and incremental updates.
+ */
 public class Chunk {
+
+    /** Width and height of the chunk (X and Z dimensions). */
     public static final int SIZE = 8;
+
+    /** Vertical depth of the chunk (Y dimension). */
     public static final int DEPTH = SIZE * 3;
+
+    /** Number of threads used for parallel generation. */
     private final int THREAD_COUNT = 8;
+
+    /** 3D array storing the blocks of this chunk. */
     private final Block[][][] blocks = new Block[SIZE][DEPTH][SIZE];
 
+    /** Queue of block creation tasks for deferred execution. */
     private final Queue<Runnable> taskQueue = new ConcurrentLinkedQueue<>();
+
+    /** Thread pool for parallel chunk generation. */
     private final ExecutorService executor = Executors.newFixedThreadPool(THREAD_COUNT);
 
+    /** Material used for the top layer (grass blocks). */
     private final Material grassMaterial;
+
+    /** Material used for inner layers (dirt blocks). */
     private final Material dirtMaterial;
 
+    /** Position of this chunk in the world. */
     private Vector3f chunkPosition;
 
+    /**
+     * Initializes the chunk at the given world position and starts parallel generation.
+     *
+     * @param position The world-space position of the chunk origin.
+     */
     public Chunk(Vector3f position) {
         this.chunkPosition = position;
         this.grassMaterial = new Material("/textures/grassblock.png");
@@ -32,14 +56,15 @@ public class Chunk {
             final int threadId = i;
             executor.submit(() -> generateByX(threadId));
         }
-
     }
 
-    // Génération basée sur l'axe X
+    /**
+     * Generates a vertical slice of the chunk based on the X-axis (parallelized).
+     */
     private void generateByX(int threadId) {
         int chunkSize = SIZE / THREAD_COUNT;
         int chunkStartX = threadId * chunkSize;
-        int chunkEndX = chunkStartX + chunkSize;
+        int chunkEndX = Math.min(chunkStartX + chunkSize, SIZE);
 
         int chunkStartY = (int) chunkPosition.getZ();
         int chunkEndY = chunkStartY + DEPTH;
@@ -47,25 +72,23 @@ public class Chunk {
         int chunkStartZ = 0;
         int chunkEndZ = SIZE;
 
-        chunkEndX = Math.min(chunkEndX, SIZE);
-
-        for (int bx = chunkStartX; bx < chunkEndX; bx++) {
-            for (int by = chunkStartY; by < chunkEndY; by++) {
-                for (int bz = chunkStartZ; bz < chunkEndZ; bz++) {
-                    if (bx < SIZE && by < DEPTH && bz < SIZE) {
-                        int finalBx = bx, finalBy = by, finalBz = bz;
-                        taskQueue.add(() -> createBlock(finalBx, finalBy, finalBz));
-                    }
+        for (int x = chunkStartX; x < chunkEndX; x++) {
+            for (int y = chunkStartY; y < chunkEndY; y++) {
+                for (int z = chunkStartZ; z < chunkEndZ; z++) {
+                    int finalX = x, finalY = y, finalZ = z;
+                    taskQueue.add(() -> createBlock(finalX, finalY, finalZ));
                 }
             }
         }
     }
 
-    // Génération basée sur l'axe Z
+    /**
+     * Alternative generation method using the Z-axis. (Unused by default)
+     */
     private void generateByZ(int threadId) {
         int chunkSize = SIZE / THREAD_COUNT;
         int chunkStartZ = threadId * chunkSize;
-        int chunkEndZ = chunkStartZ + chunkSize;
+        int chunkEndZ = Math.min(chunkStartZ + chunkSize, SIZE);
 
         int chunkStartX = 0;
         int chunkEndX = SIZE;
@@ -73,20 +96,19 @@ public class Chunk {
         int chunkStartY = (int) chunkPosition.getZ();
         int chunkEndY = chunkStartY + DEPTH;
 
-        chunkEndZ = Math.min(chunkEndZ, SIZE);
-
-        for (int bx = chunkStartX; bx < chunkEndX; bx++) {
-            for (int by = chunkStartY; by < chunkEndY; by++) {
-                for (int bz = chunkStartZ; bz < chunkEndZ; bz++) {
-                    if (bx < SIZE && by < DEPTH && bz < SIZE) {
-                        int finalBx = bx, finalBy = by, finalBz = bz;
-                        taskQueue.add(() -> createBlock(finalBx, finalBy, finalBz));
-                    }
+        for (int x = chunkStartX; x < chunkEndX; x++) {
+            for (int y = chunkStartY; y < chunkEndY; y++) {
+                for (int z = chunkStartZ; z < chunkEndZ; z++) {
+                    int finalX = x, finalY = y, finalZ = z;
+                    taskQueue.add(() -> createBlock(finalX, finalY, finalZ));
                 }
             }
         }
     }
 
+    /**
+     * Creates a block at the specified chunk coordinates and assigns the appropriate mesh.
+     */
     private void createBlock(int x, int y, int z) {
         blocks[x][y][z] = new Block(
                 x * y * z,
@@ -97,8 +119,13 @@ public class Chunk {
         );
     }
 
+    /**
+     * Updates the chunk state:
+     * - Executes a limited number of deferred block creation tasks.
+     * - Calls update on each block.
+     */
     public void update() {
-        int maxTasksPerFrame = 1; // Limiter les tâches par frame pour la fluidité
+        int maxTasksPerFrame = 1;
         for (int i = 0; i < maxTasksPerFrame && !taskQueue.isEmpty(); i++) {
             Runnable task = taskQueue.poll();
             if (task != null) task.run();
@@ -115,6 +142,12 @@ public class Chunk {
         }
     }
 
+    /**
+     * Renders all visible blocks in the chunk using the given renderer and camera.
+     *
+     * @param renderer The renderer to draw the mesh.
+     * @param camera   The current scene camera.
+     */
     public void render(Renderer renderer, Camera camera) {
         for (int x = 0; x < SIZE; x++) {
             for (int y = 0; y < DEPTH; y++) {
@@ -127,13 +160,19 @@ public class Chunk {
         }
     }
 
+    /**
+     * Determines whether a block is visible (i.e., on the edge or has an exposed face).
+     *
+     * @param x Block X position in the chunk.
+     * @param y Block Y position in the chunk.
+     * @param z Block Z position in the chunk.
+     * @return True if the block should be rendered.
+     */
     private boolean isVisible(int x, int y, int z) {
-        // Vérifier les bords du chunk
         if (x == 0 || y == 0 || z == 0 || x == SIZE - 1 || y == DEPTH - 1 || z == SIZE - 1) {
-            return true; // Le bloc est sur le bord et donc visible
+            return true;
         }
 
-        // Vérifier si le bloc a un voisin dans chaque direction (s'il est exposé)
         return blocks[x - 1][y][z] == null || blocks[x + 1][y][z] == null ||
                 blocks[x][y - 1][z] == null || blocks[x][y + 1][z] == null ||
                 blocks[x][y][z - 1] == null || blocks[x][y][z + 1] == null;

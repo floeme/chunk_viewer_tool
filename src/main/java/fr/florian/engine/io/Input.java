@@ -1,98 +1,85 @@
 package fr.florian.engine.io;
 
-import fr.florian.engine.objects.Camera;
 import org.lwjgl.glfw.*;
 
 /**
- * Classe gérant les entrées utilisateur (clavier, souris, molette) avec GLFW.
+ * Handles user input via keyboard, mouse, and scroll wheel using GLFW.
+ * Stores input state and provides access to real-time values.
  */
 public class Input {
+
 	/**
-	 * État des touches du clavier.
-	 * Indexé par les constantes GLFW (ex : GLFW_KEY_W, GLFW_KEY_ESCAPE, etc.).
+	 * Keyboard key states.
+	 * Indexed by GLFW key constants (e.g., GLFW_KEY_W, GLFW_KEY_ESCAPE).
 	 */
 	private static boolean[] keys = new boolean[GLFW.GLFW_KEY_LAST];
 
 	/**
-	 * État des boutons de la souris.
-	 * Indexé par les constantes GLFW (ex : GLFW_MOUSE_BUTTON_LEFT, etc.).
+	 * Mouse button states.
+	 * Indexed by GLFW mouse button constants (e.g., GLFW_MOUSE_BUTTON_LEFT).
 	 */
 	private static boolean[] buttons = new boolean[GLFW.GLFW_MOUSE_BUTTON_LAST];
 
-	/**
-	 * Position actuelle de la souris sur l'axe X (horizontal).
-	 */
+	/** Current horizontal mouse position. */
 	private static double mouseX;
 
-	/**
-	 * Position actuelle de la souris sur l'axe Y (vertical).
-	 */
+	/** Current vertical mouse position. */
 	private static double mouseY;
 
-	/**
-	 * Défilement horizontal de la molette de la souris.
-	 */
+	/** Horizontal scroll offset (accumulated). */
 	private static double scrollX;
 
-	/**
-	 * Défilement vertical de la molette de la souris.
-	 */
+	/** Vertical scroll offset (accumulated). */
 	private static double scrollY;
 
-	/**
-	 * Callback pour la gestion des entrées clavier.
-	 */
+	/** Callback for keyboard key events. */
 	private GLFWKeyCallback keyboard;
 
-	/**
-	 * Callback pour la gestion des mouvements de la souris.
-	 */
+	/** Callback for mouse movement events. */
 	private GLFWCursorPosCallback mouseMove;
 
-	/**
-	 * Callback pour la gestion des clics de la souris.
-	 */
+	/** Callback for mouse button press/release events. */
 	private GLFWMouseButtonCallback mouseButtons;
 
-	/**
-	 * Callback pour la gestion du défilement de la molette de la souris.
-	 */
+	/** Callback for mouse scroll wheel input. */
 	private GLFWScrollCallback mouseScroll;
 
-
 	/**
-	 * Initialise les callbacks d'entrée pour le clavier, la souris et la molette.
+	 * Initializes all GLFW input callbacks.
 	 */
 	public Input() {
 		keyboard = new GLFWKeyCallback() {
+			@Override
 			public void invoke(long window, int key, int scancode, int action, int mods) {
-				keys[key] = (action != GLFW.GLFW_RELEASE);
+				if (key >= 0 && key < keys.length)
+					keys[key] = (action != GLFW.GLFW_RELEASE);
 			}
 		};
-		
+
 		mouseMove = new GLFWCursorPosCallback() {
+			@Override
 			public void invoke(long window, double xpos, double ypos) {
 				mouseX = xpos;
 				mouseY = ypos;
 			}
 		};
-		
-		mouseButtons = new GLFWMouseButtonCallback() {
-			public void invoke(long window, int button, int action, int mods) {
-				buttons[button] = (action != GLFW.GLFW_RELEASE);
 
-				// on masque ou réaffiche le curseur de la souris lors de lappuie souris.
+		mouseButtons = new GLFWMouseButtonCallback() {
+			@Override
+			public void invoke(long window, int button, int action, int mods) {
+				if (button >= 0 && button < buttons.length)
+					buttons[button] = (action != GLFW.GLFW_RELEASE);
+
+				// Toggle cursor visibility when right-clicking
 				if (button == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
-					if (action == GLFW.GLFW_PRESS) {
-						GLFW.glfwSetInputMode(window, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_DISABLED);
-					} else if (action == GLFW.GLFW_RELEASE) {
-						GLFW.glfwSetInputMode(window, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_NORMAL);
-					}
+					GLFW.glfwSetInputMode(window, GLFW.GLFW_CURSOR,
+							action == GLFW.GLFW_PRESS ? GLFW.GLFW_CURSOR_DISABLED : GLFW.GLFW_CURSOR_NORMAL);
 				}
 			}
 		};
 
 		mouseScroll = new GLFWScrollCallback() {
+			@Override
 			public void invoke(long window, double offsetx, double offsety) {
 				scrollX += offsetx;
 				scrollY += offsety;
@@ -101,29 +88,27 @@ public class Input {
 	}
 
 	/**
-	 * Vérifie si une touche du clavier est actuellement enfoncée.
+	 * Checks if a specific keyboard key is currently pressed.
 	 *
-	 * @param key Code de la touche (ex : GLFW_KEY_W, GLFW_KEY_ESCAPE).
-	 * @return true si la touche est enfoncée, false sinon.
+	 * @param key GLFW key code.
+	 * @return True if the key is down, false otherwise.
 	 */
 	public static boolean isKeyDown(int key) {
 		return keys[key];
 	}
 
-
 	/**
-	 * Vérifie si un bouton de la souris est actuellement enfoncé.
+	 * Checks if a specific mouse button is currently pressed.
 	 *
-	 * @param button Code du bouton (ex : GLFW_MOUSE_BUTTON_LEFT).
-	 * @return true si le bouton est enfoncé, false sinon.
+	 * @param button GLFW mouse button code.
+	 * @return True if the button is down, false otherwise.
 	 */
 	public static boolean isButtonDown(int button) {
 		return buttons[button];
 	}
 
-
 	/**
-	 * Libère les ressources associées aux callbacks GLFW.
+	 * Releases all GLFW input callbacks.
 	 */
 	public void destroy() {
 		keyboard.free();
@@ -133,78 +118,64 @@ public class Input {
 	}
 
 	/**
-	 * Obtient la position actuelle de la souris sur l'axe X.
-	 *
-	 * @return Coordonnée X de la souris.
+	 * @return The current horizontal mouse position.
 	 */
 	public static double getMouseX() {
 		return mouseX;
 	}
 
 	/**
-	 * Obtient la position actuelle de la souris sur l'axe Y.
-	 *
-	 * @return Coordonnée Y de la souris.
+	 * @return The current vertical mouse position.
 	 */
 	public static double getMouseY() {
 		return mouseY;
 	}
 
-
 	/**
-	 * Obtient le défilement horizontal de la molette de la souris.
-	 *
-	 * @return Valeur du défilement horizontal.
+	 * @return Total horizontal scroll offset.
 	 */
 	public static double getScrollX() {
 		return scrollX;
 	}
 
 	/**
-	 * Obtient le défilement vertical de la molette de la souris.
-	 *
-	 * @return Valeur du défilement vertical.
+	 * @return Total vertical scroll offset.
 	 */
 	public static double getScrollY() {
 		return scrollY;
 	}
 
 	/**
-	 * Retourne le callback du clavier.
-	 *
-	 * @return Instance de {@link GLFWKeyCallback}.
+	 * @return The GLFW key callback used by this input manager.
 	 */
 	public GLFWKeyCallback getKeyboardCallback() {
 		return keyboard;
 	}
 
 	/**
-	 * Retourne le callback de la position de la souris.
-	 *
-	 * @return Instance de {@link GLFWCursorPosCallback}.
+	 * @return The GLFW cursor position callback.
 	 */
 	public GLFWCursorPosCallback getMouseMoveCallback() {
 		return mouseMove;
 	}
 
 	/**
-	 * Retourne le callback des boutons de la souris.
-	 *
-	 * @return Instance de {@link GLFWMouseButtonCallback}.
+	 * @return The GLFW mouse button callback.
 	 */
 	public GLFWMouseButtonCallback getMouseButtonsCallback() {
 		return mouseButtons;
 	}
 
 	/**
-	 * Retourne le callback de la molette de la souris.
-	 *
-	 * @return Instance de {@link GLFWScrollCallback}.
+	 * @return The GLFW mouse scroll callback.
 	 */
 	public GLFWScrollCallback getMouseScrollCallback() {
 		return mouseScroll;
 	}
 
+	/**
+	 * @return True if the left mouse button is currently held down.
+	 */
 	public static boolean isLeftMouseDown() {
 		return buttons[GLFW.GLFW_MOUSE_BUTTON_LEFT];
 	}

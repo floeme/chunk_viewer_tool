@@ -11,77 +11,76 @@ import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL30;
 
 /**
- * Classe Window
- * <p>
- * Cette classe gère la création, l'affichage et la gestion d'une fenêtre GLFW.
- * Elle prend en charge les événements d'entrée (clavier, souris) et le mode plein écran.
+ * The Window class handles the creation, display, and management of a GLFW window.
+ * It also manages input events (keyboard, mouse), fullscreen mode, and OpenGL initialization.
  */
 public class Window {
 
-    /** Largeur de la fenêtre en pixels. */
+    /** Window width in pixels. */
     private int width;
 
-    /** Hauteur de la fenêtre en pixels. */
+    /** Window height in pixels. */
     private int height;
 
-    /** Titre de la fenêtre. */
+    /** Title of the window. */
     private String title;
 
-    /** Identifiant de la fenêtre GLFW. */
+    /** GLFW window handle. */
     private long window;
 
-    /** Nombre d'images rendues en une seconde (FPS). */
+    /** Number of frames rendered in the last second. */
     private int frames;
 
-    /** Temps de référence en millisecondes pour le calcul des FPS. */
+    /** Time reference for FPS calculation (in milliseconds). */
     private static long time;
 
-    /** Gestionnaire des entrées clavier et souris. */
+    /** Input handler for keyboard and mouse events. */
     private Input input;
 
-    /** Composantes couleur de fond RGB. */
+    /** RGB background color. */
     private Vector3f background = new Vector3f(0, 0, 0);
 
-    /** Callback pour gérer le redimensionnement de la fenêtre. */
+    /** GLFW callback for window resize events. */
     private GLFWWindowSizeCallback sizeCallback;
 
-    /** Indique si la fenêtre a été redimensionnée. */
+    /** Indicates if the window has been resized. */
     private boolean isResized;
 
-    /** Indique si la fenêtre est en mode plein écran. */
+    /** Indicates if the window is currently in fullscreen mode. */
     private boolean isFullscreen;
 
-    /** Position X de la fenêtre avant le passage en plein écran. */
+    /** Window X position before switching to fullscreen. */
     private int[] windowPosX = new int[1];
 
-    /** Position Y de la fenêtre avant le passage en plein écran. */
+    /** Window Y position before switching to fullscreen. */
     private int[] windowPosY = new int[1];
 
-    /** Matrice de projection pour passer de la 3D à la 2D. */
+    /** Projection matrix for 3D rendering. */
     private Matrix4f projectionMatrix;
 
     /**
-     * Constructeur de la classe Window.
+     * Creates a new window with the given size and title.
      *
-     * @param width  Largeur de la fenêtre.
-     * @param height Hauteur de la fenêtre.
-     * @param title  Titre de la fenêtre.
+     * @param width  Window width in pixels.
+     * @param height Window height in pixels.
+     * @param title  Title shown in the window title bar.
      */
     public Window(int width, int height, String title) {
         this.width = width;
         this.height = height;
         this.title = title;
-        projectionMatrix = Matrix4f.projection(70.0f, (float) width / (float) height, 0.1f, 1000.0f);
+        this.projectionMatrix = Matrix4f.projection(70.0f, (float) width / height, 0.1f, 1000.0f);
     }
 
     /**
-     * Crée la fenêtre GLFW et initialise le contexte OpenGL.
+     * Initializes GLFW, creates the window, and sets up the OpenGL context and callbacks.
      */
     public void create() {
         if (!GLFW.glfwInit()) {
-            System.err.println("ERROR: GLFW wasn't initializied");
+            System.err.println("ERROR: GLFW wasn't initialized");
             return;
         }
+
         input = new Input();
         window = GLFW.glfwCreateWindow(width, height, title, isFullscreen ? GLFW.glfwGetPrimaryMonitor() : 0, 0);
 
@@ -94,6 +93,7 @@ public class Window {
         windowPosX[0] = (videoMode.width() - width) / 2;
         windowPosY[0] = (videoMode.height() - height) / 2;
         GLFW.glfwSetWindowPos(window, windowPosX[0], windowPosY[0]);
+
         GLFW.glfwMakeContextCurrent(window);
         GL.createCapabilities();
         GL11.glEnable(GL11.GL_DEPTH_TEST);
@@ -107,7 +107,7 @@ public class Window {
     }
 
     /**
-     * Crée et enregistre les callbacks pour gérer les événements de la fenêtre.
+     * Sets up the necessary GLFW callbacks (resize, input).
      */
     private void createCallbacks() {
         sizeCallback = new GLFWWindowSizeCallback() {
@@ -126,7 +126,7 @@ public class Window {
     }
 
     /**
-     * Met à jour l'état de la fenêtre (FPS, événements, etc.).
+     * Updates the window: handles resizing, clears buffers, polls input events, and updates FPS.
      */
     public void update() {
         if (isResized) {
@@ -147,51 +147,54 @@ public class Window {
     }
 
     /**
-     * Échange les buffers pour afficher l'image suivante.
+     * Swaps the front and back buffers, displaying the rendered frame.
      */
     public void swapBuffers() {
         GLFW.glfwSwapBuffers(window);
     }
 
     /**
-     * Vérifie si la fenêtre doit être fermée.
+     * Checks whether the window should close.
      *
-     * @return true si la fenêtre doit être fermée, false sinon.
+     * @return true if the user has requested to close the window.
      */
     public boolean shouldClose() {
         return GLFW.glfwWindowShouldClose(window);
     }
 
     /**
-     * Détruit la fenêtre et libère les ressources associées.
+     * Destroys the window and releases all resources.
      */
     public void destroy() {
-		input.destroy();
+        input.destroy();
         sizeCallback.free();
 
-        GLFW.glfwWindowShouldClose(window);
         GLFW.glfwDestroyWindow(window);
         GLFW.glfwTerminate();
     }
 
     /**
-     * Modifie la couleur de fond de la fenêtre.
+     * Sets the background clear color.
      *
-     * @param r Composante rouge.
-     * @param g Composante verte.
-     * @param b Composante bleue.
+     * @param r Red component (0.0–1.0).
+     * @param g Green component (0.0–1.0).
+     * @param b Blue component (0.0–1.0).
      */
     public void setBackgroundColor(float r, float g, float b) {
-        background.set(r,g,b);
+        background.set(r, g, b);
     }
 
+    /**
+     * Returns whether the window is in fullscreen mode.
+     */
     public boolean isFullscreen() {
         return isFullscreen;
     }
 
-
     /**
-     * Permet de mettre la fenêtre en plein écran.
+     * Toggles fullscreen mode on or off.
+     *
+     * @param isFullscreen True to enable fullscreen mode.
      */
     public void setFullscreen(boolean isFullscreen) {
         this.isFullscreen = isFullscreen;
@@ -201,37 +204,48 @@ public class Window {
             GLFW.glfwGetWindowPos(window, windowPosX, windowPosY);
             GLFW.glfwSetWindowMonitor(window, GLFW.glfwGetPrimaryMonitor(), 0, 0, width, height, 0);
         } else {
-			GLFW.glfwSetWindowMonitor(window, 0, windowPosX[0], windowPosY[0], width, height, 0);
+            GLFW.glfwSetWindowMonitor(window, 0, windowPosX[0], windowPosY[0], width, height, 0);
         }
     }
 
-
-    public void mouseState(boolean lock){
+    /**
+     * Locks or unlocks the mouse cursor.
+     *
+     * @param lock True to lock the cursor (e.g., for FPS camera mode).
+     */
+    public void mouseState(boolean lock) {
         GLFW.glfwSetInputMode(window, GLFW.GLFW_CURSOR, lock ? GLFW.GLFW_CURSOR_DISABLED : GLFW.GLFW_CURSOR_NORMAL);
     }
 
-
+    /** @return The current window width in pixels. */
     public int getWidth() {
         return width;
     }
 
+    /** @return The current window height in pixels. */
     public int getHeight() {
         return height;
     }
 
+    /** @return The title of the window. */
     public String getTitle() {
         return title;
     }
 
     /**
-     * Renvoie l'identifiant de la fenêtre GLFW.
+     * Returns the native GLFW window handle.
      *
-     * @return Identifiant de la fenêtre.
+     * @return The window handle.
      */
     public long getWindow() {
         return window;
     }
 
+    /**
+     * Returns the current projection matrix for 3D rendering.
+     *
+     * @return The projection matrix.
+     */
     public Matrix4f getProjectionMatrix() {
         return projectionMatrix;
     }
